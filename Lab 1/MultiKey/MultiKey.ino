@@ -60,36 +60,6 @@ void loop() {
     }*/
       buttonState = digitalRead(buttonPin);
     
-  /*
-  if(buttonState == button_pressed){
-      Serial.println("PRESS!");
-    old_button = button_pressed;
-    int on=1;
-  /*  while(on){
-    delay(10);
-       buttonState = digitalRead(buttonPin);
-       if(buttonState != button_pressed){
-        on=0;
-        
-       }
-    }
-  }
-
-   if((buttonState == button_released) && !old_button){
-    delay(10);
-
-    if (buttonState == button_released){
-      if (octive == 1){
-        octive = 2;
-      }
-      else{
-        octive = 1;
-      }
-   }
-   }*/
-    
-    // Fills kpd.key[ ] array with up-to 10 active keys.
-    // Returns true if there are ANY active keys.
     button();
     if (kpd.getKeys())
     {
