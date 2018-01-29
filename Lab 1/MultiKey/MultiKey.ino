@@ -10,7 +10,6 @@
 || | keyboard.
 || #
 */
-
 #include <Keypad.h>
 
 const byte ROWS = 4; //four rows
