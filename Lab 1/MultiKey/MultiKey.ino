@@ -25,17 +25,28 @@ byte rowPins[ROWS] = {9, 2, 3, 5}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {4, 6, 7, 8}; //connect to the column pinouts of the keypad
 
 Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
-
+int note;
+double pitch;
 unsigned long loopCount;
 unsigned long startTime;
+byte speaker = 11;
 String msg;
-
+int note_vals[]= {0,2,4,5,7,9,11,12};
+int octive = 1;
+const int buttonPin = 12;
+int button_pressed = 0;
+int lastButtonState = 0;
+int buttonState = 0;
+int button_released = 1;
+unsigned long lastDebounceTime = 0;
+unsigned long debounceDelay = 50; 
 
 void setup() {
     Serial.begin(9600);
     loopCount = 0;
     startTime = millis();
     msg = "";
+    pinMode(buttonPin, INPUT_PULLUP);
 }
 
 
@@ -47,35 +58,103 @@ void loop() {
         startTime = millis();
         loopCount = 0;
     }*/
+      buttonState = digitalRead(buttonPin);
+    
+  /*
+  if(buttonState == button_pressed){
+      Serial.println("PRESS!");
+    old_button = button_pressed;
+    int on=1;
+  /*  while(on){
+    delay(10);
+       buttonState = digitalRead(buttonPin);
+       if(buttonState != button_pressed){
+        on=0;
+        
+       }
+    }
+  }
 
+   if((buttonState == button_released) && !old_button){
+    delay(10);
+
+    if (buttonState == button_released){
+      if (octive == 1){
+        octive = 2;
+      }
+      else{
+        octive = 1;
+      }
+   }
+   }*/
+    
     // Fills kpd.key[ ] array with up-to 10 active keys.
     // Returns true if there are ANY active keys.
+    button();
     if (kpd.getKeys())
     {
         for (int i=0; i<LIST_MAX; i++)   // Scan the whole key list.
-        {/*
+        {
             if ( kpd.key[i].stateChanged )   // Only find keys that have changed state.
             {
+                if (kpd.key[i].kchar >= '1' && kpd.key[i].kchar <= '7'){ 
+                note = kpd.key[i].kchar - '1';
+                pitch = octive * 261.2 * pow(2.0,(note_vals[note]/12.0));
                 switch (kpd.key[i].kstate) {  // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
                     case PRESSED:
+                     tone(speaker, pitch);
+                    msg = " PRESSED.";
+                break;
+                    case HOLD:
+                   
+                    msg = " HOLD.";
+                break;
+                    case RELEASED:
+                    noTone(speaker);
+                    msg = " RELEASED.";
+                break;
+                    case IDLE:
+                    msg = " IDLE.";
+                }
+                }else if (kpd.key[i].kchar == 'A'){
+                   switch (kpd.key[i].kstate) {  // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
+                    case PRESSED:
+                    
                     msg = " PRESSED.";
                 break;
                     case HOLD:
                     msg = " HOLD.";
                 break;
                     case RELEASED:
+                    Serial.println("octive change");
+                    octive = (octive == 1) ? 2 : 1;
                     msg = " RELEASED.";
                 break;
                     case IDLE:
                     msg = " IDLE.";
                 }
-               // Serial.print("Key ");
-                Serial.print(kpd.key[i].kchar);
-                //Serial.println(msg);
-            }*/
-        if (( kpd.key[i].stateChanged && kpd.key[i].kstate == PRESSED)){
-          Serial.println(kpd.key[i].kchar);
+                }
+                
+                
+                Serial.print(note);
+                Serial.println();
+               Serial.println(pitch);
+            }
+        
         }
         }
     }
-}  // End loop
+void button(){
+ Serial.println("In button");
+  int reading = digitalRead(buttonPin);
+ while(reading==LOW){
+  delay(10);
+  reading = digitalRead(buttonPin);
+  if(reading != LOW){
+    Serial.println("octive change");
+        octive = (octive == 1) ? 2 : 1; 
+  }
+ }
+}
+
+ 
