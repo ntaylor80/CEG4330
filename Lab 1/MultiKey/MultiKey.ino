@@ -47,8 +47,6 @@ void setup() {
     msg = "";
     pinMode(buttonPin, INPUT_PULLUP);
 }
-
-
 void loop() {
     loopCount++;
     /*if ( (millis()-startTime)>5000 ) {
@@ -108,8 +106,7 @@ void loop() {
                 Serial.print(note);
                 Serial.println();
                Serial.println(pitch);
-            }
-        
+            }        
         }
         }
     }
@@ -125,5 +122,3 @@ void button(){
   }
  }
 }
-
- 
