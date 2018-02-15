@@ -1,4 +1,8 @@
+/* Jason Elting & Noah Taylor
+Registers TCCR2B and TCCR2A will be used to control the frequency,
+by changing their value and the prescalar to meet the closest frequency possible.
 
+*/
 int pin = 3;
 int value;
 
