@@ -1,24 +1,24 @@
 /*
   Reading a serial ASCII-encoded string.
 
- This sketch demonstrates the Serial parseInt() function.
- It looks for an ASCII string of comma-separated values.
- It parses them into ints, and uses those to fade an RGB LED.
+  This sketch demonstrates the Serial parseInt() function.
+  It looks for an ASCII string of comma-separated values.
+  It parses them into ints, and uses those to fade an RGB LED.
 
- Circuit: Common-Cathode RGB LED wired like so:
- * Red anode: digital pin 3
- * Green anode: digital pin 5
- * Blue anode: digital pin 6
- * Cathode : GND
+  Circuit: Common-Cathode RGB LED wired like so:
+   Red anode: digital pin 3
+   Green anode: digital pin 5
+   Blue anode: digital pin 6
+   Cathode : GND
 
- created 13 Apr 2012
- by Tom Igoe
- 
- modified 14 Mar 2016
- by Arturo Guadalupi
+  created 13 Apr 2012
+  by Tom Igoe
 
- This example code is in the public domain.
- */
+  modified 14 Mar 2016
+  by Arturo Guadalupi
+
+  This example code is in the public domain.
+*/
 
 // pins for the LEDs:
 
@@ -31,55 +31,70 @@ String a;
 
 void setup() {
   // initialize serial:
+  pinMode(3, OUTPUT);
   Serial.begin(9600);
   // make the pins outputs:
-
+  //TCCR2B |= _BV(WGM13) + _BV(WGM12) + _BV(WGM11) + _BV(WGM10);
+  TCCR2A = _BV(COM2A0) | _BV(COM2B1) | _BV(WGM21) | _BV(WGM20);
+  TCCR2B = _BV(WGM22) | _BV(CS22);
+  OCR2A = 180;
+  OCR2B = 50;
 }
 
 void loop() {
 
   if (Serial.available() >= 2) {
-  /*pin = Stream.parseInt(Stream.readString());
-  
-  value = Stream.parseInt(Stream.readString()); */
- frequency = Serial.parseInt();
- duty_cycle = Serial.parseInt();
- clear_serial();
- //frequency= 31250/frequency;
- setPwmFrequency(pin,frequency);
- Serial.println(pin);
- Serial.println(frequency);
-  analogWrite(pin, duty_cycle);
+    /*pin = Stream.parseInt(Stream.readString());
+
+      value = Stream.parseInt(Stream.readString()); */
+    frequency = Serial.parseInt();
+    duty_cycle = Serial.parseInt();
+    clear_serial();
+    setFreq(frequency);
+    //frequency= 31250/frequency;
+   // setPwmFrequency(pin, frequency);
+    
+    Serial.println(frequency);
+    Serial.println(duty_cycle);
+    //OCR2A=frequency;
+   
+    analogWrite(pin, duty_cycle*2.5);
   }
-    }
-
-void clear_serial(){
-while (Serial.available() > 0){
-  Serial.read();
 }
-}
-//from http://playground.arduino.cc/Code/PwmFrequency
-void setPwmFrequency(int pin, int freq) {
-  byte mode;
-  int val;
-    if(freq<=76){
-      val=1024;
-    }else if(freq<=183){
-      val=256;
-    }else if(freq<=367){
-      val=128;
-    }else if(freq<=735){
-      val=64;
-    }else if(freq<=2450){
-      val=32;
-    }else if(freq<=17646){
-      val=8;
-    }else{
-      val=1;
-    }
 
+void clear_serial() {
+  while (Serial.available() > 0) {
+    Serial.read();
+  }
+}
+
+void setFreq(int freq) {
+  int vals[7] = {1, 8, 32, 64, 128, 256, 1024};
   
-    switch(freq) {
+  for (int val : vals) {
+    for (int i = 0; i <= 255; i++) {
+      if (calc_error(freq,calcFreq(i, val) < .1));
+        setPwmFrequency(pin,val);
+        OCR2A=i;
+        return;
+        
+    }
+  }
+  Serial.println("i can't do that");
+}
+  float calcFreq(int N, int TOP) {
+    return (16000000 / float( N *(1+ TOP)));
+  }
+
+  float calc_error(int expected, float actual){
+    return (expected - actual)/ expected;
+  }
+
+  //from http://playground.arduino.cc/Code/PwmFrequency
+  void setPwmFrequency(int pin, int freq) {
+    byte mode;
+    
+    switch (freq) {
       case 1: mode = 0x01; break;
       case 8: mode = 0x02; break;
       case 32: mode = 0x03; break;
@@ -90,9 +105,9 @@ void setPwmFrequency(int pin, int freq) {
       default: return;
     }
     TCCR2B = TCCR2B & 0b11111000 | mode;
-  
-}
-  
+
+  }
+
 
 
 
