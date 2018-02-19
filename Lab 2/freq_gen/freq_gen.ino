@@ -50,13 +50,13 @@ void loop() {
     frequency = Serial.parseInt();
     duty_cycle = Serial.parseInt();
     clear_serial();
-    setFreq(frequency);
+    //setFreq(frequency);
     //frequency= 31250/frequency;
-   // setPwmFrequency(pin, frequency);
+   // setPrescaler(pin, frequency);
     
     Serial.println(frequency);
     Serial.println(duty_cycle);
-    //OCR2A=frequency;
+    OCR2A=frequency;
    
     analogWrite(pin, duty_cycle*2.5);
   }
@@ -74,8 +74,10 @@ void setFreq(int freq) {
   for (int val : vals) {
     for (int i = 0; i <= 255; i++) {
       if (calc_error(freq,calcFreq(i, val) < .1));
-        setPwmFrequency(pin,val);
+        setPrescaler(pin,val);
         OCR2A=i;
+        Serial.print("OCR2A: ");
+        Serial.print(i);
         return;
         
     }
@@ -91,7 +93,7 @@ void setFreq(int freq) {
   }
 
   //from http://playground.arduino.cc/Code/PwmFrequency
-  void setPwmFrequency(int pin, int freq) {
+  void setPrescaler(int pin, int freq) {
     byte mode;
     
     switch (freq) {
