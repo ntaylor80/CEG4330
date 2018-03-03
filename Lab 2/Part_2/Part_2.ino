@@ -2,6 +2,7 @@ long Fast_PWM_frequency;
 long frequency;
 int duty_cycle;
 char message[50];
+int sensor_pin= A1;
 //int timer = 2;
 void setup() {
   Serial.begin(9600);
@@ -137,3 +138,13 @@ void set_pin_3_pwm(long freq,int duty){
   Serial.println(message);
 }
 
+float getSignal(){
+  long pwm_high=pulseIn(sensor_pin,HIGH);
+  long pwm_low=pulseIn(sensor_pin, LOW);
+  float period=pwm_high+pwm_low;
+  //Period in microseconds
+  period=period/1000000;
+  //period in secondds
+  float frequency=1/period;
+  return frequency;
+}
