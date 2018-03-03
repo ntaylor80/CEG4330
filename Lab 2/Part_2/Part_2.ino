@@ -1,35 +1,32 @@
 long Fast_PWM_frequency;
-int frequency;
+long frequency;
 int duty_cycle;
 char message[50];
-int timer = 1;
+//int timer = 2;
 void setup() {
   Serial.begin(9600);
 
-if (timer == 2){
-  pinMode(3, OUTPUT);
-  TCCR2A = _BV(COM2A1) | _BV(COM2B1) | _BV(WGM21) | _BV(WGM20);
-  TCCR2B = _BV(WGM22) | _BV(CS20);
-  OCR2A = 0;
-  OCR2B = 0;
-}
 
-else if (timer == 1){
-  Serial.println("timer 1");
+  pinMode(3, OUTPUT);
+  TCCR2A = _BV(COM2A1) | _BV(COM2B1) | _BV(COM2A0) | _BV(COM2B0) | _BV(WGM21) | _BV(WGM20);
+  TCCR2B = _BV(WGM22) | _BV(CS20);
+  OCR2A = 255;
+  OCR2B = 100;
  
   pinMode(10, OUTPUT);
 
-  TCCR1A = _BV(COM1A1) | _BV(COM1B1) | _BV(WGM11) | _BV(WGM10);
-  TCCR1B = _BV(CS11) | _BV(WGM12);
-  OCR1B = 766;
-}
+  TCCR1A =  _BV(COM1B1) | _BV(WGM11) | _BV(WGM11);
+  TCCR1B = _BV(CS11) | _BV(WGM13) | _BV(WGM12);
+  ICR1 = 2000; //top
+  OCR1B = 766; //duty
 }
 void loop() {
  if (Serial.available() >= 2) {
     frequency = Serial.parseInt();
     duty_cycle = Serial.parseInt();
     clear_serial();
-    setFreq(frequency,duty_cycle);
+    set_pin_3_pwm(frequency,duty_cycle);
+   set_pin_10_pwm(frequency,duty_cycle);
     Serial.println(frequency);
     Serial.println(duty_cycle);
   }
@@ -39,12 +36,60 @@ void clear_serial() {
     Serial.read();
   }
 }
-void setFreq(int freq,int duty){
+void set_pin_10_pwm(long freq,int duty){
+  long max_top = 65536;
   double N_TOP = 16000000.0/ freq;
   int prescaler;
   int top;
   int duty_cycle;
+  char mode;
+  Serial.println("pin 10");
+  sprintf(message,"N_TOP: %f",N_TOP);
+  Serial.println(N_TOP);
+  if(N_TOP <= 1 * max_top){
+    prescaler = 1;
+  }
+  else if (N_TOP <= 8 * max_top){
+      prescaler = 8;
+  }
+ 
+  else if (N_TOP <= 64 * max_top){
+      prescaler = 64;
+  }
+  else if (N_TOP <= 256 * max_top){
+      prescaler = 256;
+  }
+  else {
+      prescaler = 1024;
+  }
+
+  switch(prescaler) {
+      case 1: mode = 0x01; break;
+      case 8: mode = 0x02; break;
+      case 64: mode = 0x04; break;
+      case 256: mode = 0x06; break;
+      case 1024: mode = 0x07; break;
+      default: return;
+    }
+  TCCR1B = TCCR1B & 0b11111000 | mode;
   
+  top = (N_TOP / prescaler) - 1;
+  duty_cycle = (duty / 100.0) * top;
+
+  
+  ICR1 = top;
+  OCR1B = duty_cycle;
+  
+  sprintf(message,"prescaler: %d Top: %d",prescaler,top);
+  Serial.println(message);
+}
+void set_pin_3_pwm(long freq,int duty){
+  double N_TOP = 16000000.0/ freq;
+  int prescaler;
+  int top;
+  int duty_cycle;
+  char mode;
+  Serial.println("pin 3");
   sprintf(message,"N_TOP: %f",N_TOP);
   Serial.println(N_TOP);
   if(N_TOP <= 256){
@@ -69,10 +114,25 @@ void setFreq(int freq,int duty){
       prescaler = 1024;
   }
 
+  switch(prescaler) {
+      case 1: mode = 0x01; break;
+      case 8: mode = 0x02; break;
+      case 32: mode = 0x03; break;
+      case 64: mode = 0x04; break;
+      case 128: mode = 0x05; break;
+      case 256: mode = 0x06; break;
+      case 1024: mode = 0x07; break;
+      default: return;
+    }
+  TCCR2B = TCCR2B & 0b11111000 | mode;
+  
   top = (N_TOP / prescaler) - 1;
-  OCR2A = top;
   duty_cycle = (duty / 100.0) * top;
+
+  
+  OCR2A = top;
   OCR2B = duty_cycle;
+  
   sprintf(message,"prescaler: %d Top: %d",prescaler,top);
   Serial.println(message);
 }
