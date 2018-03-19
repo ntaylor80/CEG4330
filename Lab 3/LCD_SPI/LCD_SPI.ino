@@ -50,16 +50,15 @@ void lcdSPISetup();
 
 //bluetooth setup code
 void bluetoothSetup(){
+   Serial.begin(115200);  // Begin the serial monitor at 9600bps
+
   bluetooth.begin(115200);  // The Bluetooth Mate defaults to 115200bps
   bluetooth.print("$");  // Print three times individually
   bluetooth.print("$");
   bluetooth.print("$");  // Enter command mode
   delay(100);  // Short delay, wait for the Mate to send back CMD
- // bluetooth.println("U,9600,N");  // Temporarily Change the baudrate to 9600, no parity
+  bluetooth.println("SN,NJ");  // Temporarily Change the baudrate to 9600, no parity
   // 115200 can be too fast at times for NewSoftSerial to relay the data reliably
- // delay(100);
-  bluetooth.println("SN,!!!!q");
-  bluetooth.begin(9600);  // Start bluetooth serial at 9600
 }
 
 // Send character to LCD over SPI. Software implementation for slower SCLK
@@ -183,25 +182,49 @@ void setup(){
 
 // Arduino loop()
 void loop(){
-  // Clear screen
-  clearScreen();
+  if(bluetooth.available())  // If the bluetooth sent any characters
+  {
+    // Send any characters the bluetooth prints to the serial monitor
+    Serial.print((char)bluetooth.read());  
+  }
+  if(Serial.available())  // If stuff was typed in the serial monitor
+  {
+    // Send any characters the Serial monitor prints to the bluetooth
+    bluetooth.print((char)Serial.read());
+  }
+//  // Clear screen
+//  clearScreen();
+//  
+//  // print a 'b' to the LCD
+//  char2LCD(DATA_PIN, CLK_PIN, SS_PIN, 'b');
+//  
+//  // print a 'c' to the LCD
+//  char2LCD('c');
+//  
+//  // Wait 1 second
+//  delay(1000);
+//  
+//  // Go to second line
+//  setCursorPos(0x40);
+//  
+//  // Print a string to the LCD
+//  str2LCD("Hello World");
+//  
+//  // wait 1.5 second
+//  delay(1500);
+//
+//  while(true){
+//  if(bluetooth.available())  // If the bluetooth sent any characters
+//  {
+//    // Send any characters the bluetooth prints to the serial monitor
+//    Serial.print((char)bluetooth.read());  
+//  }
+//  if(Serial.available())  // If stuff was typed in the serial monitor
+//  {
+//    // Send any characters the Serial monitor prints to the bluetooth
+//    bluetooth.print((char)Serial.read());
+//  }
+//  }
   
-  // print a 'b' to the LCD
-  char2LCD(DATA_PIN, CLK_PIN, SS_PIN, 'b');
-  
-  // print a 'c' to the LCD
-  char2LCD('c');
-  
-  // Wait 1 second
-  delay(1000);
-  
-  // Go to second line
-  setCursorPos(0x40);
-  
-  // Print a string to the LCD
-  str2LCD("Hello World");
-  
-  // wait 1.5 second
-  delay(1500);
 
 }
