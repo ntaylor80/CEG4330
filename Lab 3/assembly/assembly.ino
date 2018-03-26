@@ -26,7 +26,7 @@ byte rowPins[ROWS] = {9, 8, 7, 6}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {5, 4, 3, 2}; //connect to the column pinouts of the keypad
 byte speaker = 11;
 
-Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
+Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 char notes[7]={'C','D','E','F','G','A','B'};
 void setup(){
   Serial.begin(9600);
@@ -34,31 +34,69 @@ void setup(){
 }
   
 void loop(){
-  char key = keypad.getKey();
+  //char key = keypad.getKey();
   if(digitalRead(pushButton)){
     octiveJmp=1;
   }else{
     octiveJmp=0;
   }
   
-  if (key){
-    if (key <= '9' && key >= '1'){
-       noteInt = key - '1';
-       if(noteInt==7){
-       pitch=note_to_freq("C", 5);
-      }else{
-       pitch=note_to_freq(String(notes[noteInt]), 4);
-      
-       }
-       
-      tone(speaker, pitch);
-       Serial.println(pitch);
-       Serial.println(notes[noteInt]);
-    }
-     
-  }else{
-    noTone(speaker);//,a261.2 * pow(2.0,(5/12.0)));
-  }
+if (kpd.getKeys())
+    {
+      char* msg;
+        for (int i=0; i<LIST_MAX; i++)   // Scan the whole key list.
+        {
+            if ( kpd.key[i].stateChanged )   // Only find keys that have changed state.
+            {
+                if (kpd.key[i].kchar >= '1' && kpd.key[i].kchar <= '8'){ 
+                noteInt = kpd.key[i].kchar - '1';
+                if (noteInt == 7){
+                  pitch=note_to_freq(String("C"), 5);
+                }else{
+                pitch=note_to_freq(String(notes[noteInt]), 4);
+                }
+                switch (kpd.key[i].kstate) {  // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
+                    case PRESSED:
+                     tone(speaker, pitch);
+                    msg = " PRESSED.";
+                break;
+                    case HOLD:
+                   
+                    msg = " HOLD.";
+                break;
+                    case RELEASED:
+                    noTone(speaker);
+                    msg = " RELEASED.";
+                break;
+                    case IDLE:
+                    msg = " IDLE.";
+                }
+                }else if (kpd.key[i].kchar == 'A'){
+                   switch (kpd.key[i].kstate) {  // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
+                    case PRESSED:
+                    
+                    msg = " PRESSED.";
+                break;
+                    case HOLD:
+                    msg = " HOLD.";
+                break;
+                    case RELEASED:
+                    Serial.println("octive change");
+                    //octive = (octive == 1) ? 2 : 1;
+                    msg = " RELEASED.";
+                break;
+                    case IDLE:
+                    msg = " IDLE.";
+                }
+                }
+                
+                
+                Serial.print(noteInt);
+                Serial.println();
+               Serial.println(pitch);
+            }        
+        }
+        }
   
   delay(100);
   
