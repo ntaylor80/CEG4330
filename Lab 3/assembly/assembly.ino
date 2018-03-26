@@ -8,11 +8,12 @@
 || #
 */
 #include <Keypad.h>
-
+#include <string.h>
+bool octiveJmp=0;
 const byte ROWS = 4; //four rows
 const byte COLS = 4; //four columns
-int note;
-int pitch;
+int noteInt;
+long pitch;
 char keys[ROWS][COLS] = {
   {'1','2','3','A'},
   {'4','5','6','B'},
@@ -26,21 +27,33 @@ byte colPins[COLS] = {5, 4, 3, 2}; //connect to the column pinouts of the keypad
 byte speaker = 11;
 
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
-
+char notes[7]={'C','D','E','F','G','A','B'};
 void setup(){
   Serial.begin(9600);
+  
 }
   
 void loop(){
   char key = keypad.getKey();
+  if(digitalRead(pushButton)){
+    octiveJmp=1;
+  }else{
+    octiveJmp=0;
+  }
+  
   if (key){
     if (key <= '9' && key >= '1'){
-       note = key - '0';
+       noteInt = key - '1';
+       if(noteInt==7){
+       pitch=note_to_freq("C", 5);
+      }else{
+       pitch=note_to_freq(String(notes[noteInt]), 4);
+      
+       }
        
-       pitch = 261.2 * pow(2.0,(note/12.0));
-       tone(speaker, pitch);
+      tone(speaker, pitch);
        Serial.println(pitch);
-       Serial.println(note);
+       Serial.println(notes[noteInt]);
     }
      
   }else{
@@ -51,31 +64,43 @@ void loop(){
   
 }
 
-long note_to_freq(char const *note, int octive) {
-    double freq = 0;
 
-    if (strcmp(note, "C") != 0) {
+long note_to_freq(String noteIn, int octive) {
+    double freq = 0;
+    Serial.println(noteIn);
+    const char* note;
+    note=noteIn.c_str();
+    Serial.println(strcmp(note, "D"));
+    if(octiveJmp)
+    {
+      octive++;
+    }
+    if (strcmp(note, "C") == 0) {
         freq = 16.35;
-    } else if (strcmp(note, "Db") != 0) {
+    } else if (strcmp(note, "Db") == 0) {
         freq = 17.32;
-    } else if (strcmp(note, "D") != 0) {
+    } else if (strcmp(note, "D") == 0) {
         freq = 18.35;
-    } else if (strcmp(note, "Eb") != 0) {
+    } else if (strcmp(note, "Eb") == 0) {
         freq = 19.45;
-    } else if (strcmp(note, "E") != 0) {
+    } else if (strcmp(note, "E") == 0) {
         freq = 20.60;
-    } else if (strcmp(note, "F") != 0) {
+    } else if (strcmp(note, "F") == 0) {
         freq = 21.83;
-    } else if (strcmp(note, "Gb") != 0) {
+    } else if (strcmp(note, "Gb") == 0) {
         freq = 23.12;
-    } else if (strcmp(note, "Ab") != 0) {
+    } else if (strcmp(note, "G") == 0) {
+        freq = 24.50;
+    } else if (strcmp(note, "Ab") == 0) {
         freq = 25.96;
-    } else if (strcmp(note, "A") != 0) {
+    } else if (strcmp(note, "A") == 0) {
         freq = 27.50;
-    } else if (strcmp(note, "Bb") != 0) {
+    } else if (strcmp(note, "Bb") == 0) {
         freq = 29.14;
-    } else if (strcmp(note, "B") != 0) {
+    } else if (strcmp(note, "B") == 0) {
         freq = 30.87;
+    }else{
+      freq=30.87;
     }
     for (int i = 0; i < octive; ++i) {
         freq = freq * 2;
