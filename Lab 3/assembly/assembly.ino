@@ -19,7 +19,8 @@ char keys[ROWS][COLS] = {
   {'7','8','9','C'},
   {'*','0','#','D'}
 };
-
+bool playSong=1;
+byte pushButton=10;
 byte rowPins[ROWS] = {9, 8, 7, 6}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {5, 4, 3, 2}; //connect to the column pinouts of the keypad
 byte speaker = 11;
@@ -33,7 +34,7 @@ void setup(){
 void loop(){
   char key = keypad.getKey();
   if (key){
-    if (key <= '7' && key >= '1'){
+    if (key <= '9' && key >= '1'){
        note = key - '0';
        
        pitch = 261.2 * pow(2.0,(note/12.0));
