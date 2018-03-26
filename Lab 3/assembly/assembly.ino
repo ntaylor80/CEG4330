@@ -51,3 +51,34 @@ void loop(){
   
 }
 
+long note_to_freq(char const *note, int octive) {
+    double freq = 0;
+
+    if (strcmp(note, "C") != 0) {
+        freq = 16.35;
+    } else if (strcmp(note, "Db") != 0) {
+        freq = 17.32;
+    } else if (strcmp(note, "D") != 0) {
+        freq = 18.35;
+    } else if (strcmp(note, "Eb") != 0) {
+        freq = 19.45;
+    } else if (strcmp(note, "E") != 0) {
+        freq = 20.60;
+    } else if (strcmp(note, "F") != 0) {
+        freq = 21.83;
+    } else if (strcmp(note, "Gb") != 0) {
+        freq = 23.12;
+    } else if (strcmp(note, "Ab") != 0) {
+        freq = 25.96;
+    } else if (strcmp(note, "A") != 0) {
+        freq = 27.50;
+    } else if (strcmp(note, "Bb") != 0) {
+        freq = 29.14;
+    } else if (strcmp(note, "B") != 0) {
+        freq = 30.87;
+    }
+    for (int i = 0; i < octive; ++i) {
+        freq = freq * 2;
+    }
+    return freq;
+}
