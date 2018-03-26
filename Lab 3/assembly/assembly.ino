@@ -22,26 +22,78 @@ char keys[ROWS][COLS] = {
 };
 bool playSong=1;
 byte pushButton=10;
+int buttonState = LOW;
+long lastDebounceTime = 0;  // the last time the output pin was toggled
+long debounceDelay = 50;  // the debounce time; increase if the output flickers
+int button_pressed = 0;
+int button_status = 1;
 byte rowPins[ROWS] = {9, 8, 7, 6}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {5, 4, 3, 2}; //connect to the column pinouts of the keypad
 byte speaker = 11;
+char music_note[3];
+int note_octive;
+float note_length;
 
 Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 char notes[7]={'C','D','E','F','G','A','B'};
 void setup(){
   Serial.begin(9600);
+  pinMode(pushButton, INPUT_PULLUP);
   
 }
   
 void loop(){
-  //char key = keypad.getKey();
-  if(digitalRead(pushButton)){
-    octiveJmp=1;
-  }else{
-    octiveJmp=0;
-  }
   
-if (kpd.getKeys())
+  //char key = keypad.getKey();
+handle_button();
+handle_serial();
+handle_keypad();  
+
+  
+  delay(100);
+  
+}
+
+void handle_button(){
+  
+    //sample the state of the button - is it pressed or not?
+ buttonState = digitalRead(pushButton);
+  //filter out any noise by setting a time buffer
+  if ( (millis() - lastDebounceTime) > debounceDelay) {
+ if (button_status == button_pressed){
+  if ( (buttonState != button_pressed) ) {
+      button_status = 1;
+      lastDebounceTime = millis(); //set the current time
+    }
+ }
+ else if ( (buttonState == button_pressed) ) {
+      octiveJmp= octiveJmp ^ 1;
+      button_status = button_pressed;
+      lastDebounceTime = millis(); //set the current time
+    }
+    
+  }
+ 
+}
+
+void handle_serial(){
+  if (Serial.available()){
+    if (Serial.peek() != 0x48){ //H character ends data
+    Serial.readBytesUntil("v",music_note,2);
+   Serial.print("music note");
+   Serial.println(music_note);
+   Serial.println(Serial.read());
+    }
+   }
+/*
+    note_octive = Serial.parseInt();
+    note_length = Serial.parseFloat();
+    Serial.print(Serial.findUntil())
+    */
+  }
+
+void handle_keypad(){
+  if (kpd.getKeys())
     {
       char* msg;
         for (int i=0; i<LIST_MAX; i++)   // Scan the whole key list.
@@ -91,24 +143,16 @@ if (kpd.getKeys())
                 }
                 
                 
-                Serial.print(noteInt);
-                Serial.println();
-               Serial.println(pitch);
+
             }        
         }
         }
-  
-  delay(100);
-  
 }
-
-
 long note_to_freq(String noteIn, int octive) {
     double freq = 0;
     Serial.println(noteIn);
     const char* note;
     note=noteIn.c_str();
-    Serial.println(strcmp(note, "D"));
     if(octiveJmp)
     {
       octive++;

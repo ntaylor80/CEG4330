@@ -1,4 +1,4 @@
-const int buttonPin = 2;
+const int buttonPin = 10;
 int button_pressed = 0;
 int buttonState = 0;
 int ledState = 0;
