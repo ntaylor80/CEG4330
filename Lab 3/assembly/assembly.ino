@@ -33,6 +33,8 @@ byte speaker = 11;
 char music_note[3];
 int note_octive;
 float note_length;
+int bpm = 120;
+int bpm_mod = 1;
 
 Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 char notes[7]={'C','D','E','F','G','A','B'};
@@ -92,6 +94,11 @@ void handle_serial(){
     */
   }
 
+int length_to_mills(int length){
+  double mills_per_beat = (bpm / 60.0) * 1000;
+  
+  return mills_per_beat * length;
+}
 void handle_keypad(){
   if (kpd.getKeys())
     {
