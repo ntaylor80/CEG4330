@@ -21,8 +21,10 @@ char keys[ROWS][COLS] = {
   {'7','8','9','C'},
   {'*','0','#','D'}
 };
+float currTime=millis();
+float prevTime=currTime;
 bool playSong=1;
-byte pushButton=10;
+
 int buttonState = LOW;
 long lastDebounceTime = 0;  // the last time the output pin was toggled
 long debounceDelay = 50;  // the debounce time; increase if the output flickers
@@ -30,7 +32,9 @@ int button_pressed = 0;
 int button_status = 1;
 byte rowPins[ROWS] = {9, 8, 7, 6}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {5, 4, 3, 2}; //connect to the column pinouts of the keypad
+byte pushButton=10;
 byte speaker = 11;
+byte led=12;
 
 
 unsigned int notes_length;
@@ -58,12 +62,21 @@ void setup(){
 void loop(){
   
   //char key = keypad.getKey();
-handle_button();
-handle_serial();
-handle_keypad();  
+
 
   
-  delay(100);
+  handle_timing(length_to_mills(1));
+  
+}
+void handle_timing(float timeToWait){
+  prevTime=currTime;
+  while(currTime-prevTime<timeToWait){
+  currTime=millis();
+  handle_button();
+  handle_serial();
+  handle_keypad();
+  
+  }
   
 }
 
@@ -116,7 +129,7 @@ void handle_serial(){
   }
 
 int length_to_mills(float length){
-  double mills_per_beat = (bpm / 60.0) * 1000;
+  double mills_per_beat = (1/(bpm / 60.0)) * 1000;
   
   return mills_per_beat * length;
 }
