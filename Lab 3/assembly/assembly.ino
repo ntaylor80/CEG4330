@@ -9,7 +9,7 @@
 */
 #include <Keypad.h>
 #include <string.h>
-#define MAX_BUFFER 256
+#define MAX_BUFFER 150
 bool octiveJmp=0;
 const byte ROWS = 4; //four rows
 const byte COLS = 4; //four columns
@@ -38,16 +38,19 @@ byte led=12;
 
 
 unsigned int notes_length;
-int bpm = 120;
+int bpm = 60;
 int bpm_mod = 1;
 
-typedef struct
+struct Note
 {
-  char name[3];
+  char name;
+  bool flat;
   int octive;
   float length;
-} Note;
-
+};
+bool playing = false;
+byte current_note = -1;
+long note_start = 0;
 Note notes_buffer[MAX_BUFFER];
 unsigned int buffer_size = 0;
 
@@ -56,7 +59,50 @@ char notes[7]={'C','D','E','F','G','A','B'};
 void setup(){
   Serial.begin(9600);
   pinMode(pushButton, INPUT_PULLUP);
+
+  buffer_size = 8;
+  notes_buffer[0].name = 'B';
+  notes_buffer[0].flat = 1;
+  notes_buffer[0].octive = 4;
+  notes_buffer[0].length = 1;
+
+  notes_buffer[1].name = 'F';
+  notes_buffer[1].flat = 0;
+  notes_buffer[1].octive = 3;
+  notes_buffer[1].length = 1.25;
   
+notes_buffer[2].name = 'B';
+notes_buffer[2].flat = 1;
+  notes_buffer[2].octive = 4;
+  notes_buffer[2].length = .25;
+
+notes_buffer[3].name = 'B';
+notes_buffer[3].flat = 1;
+  notes_buffer[3].octive = 4;
+  notes_buffer[3].length = .25;
+
+  
+notes_buffer[4].name = 'C';
+notes_buffer[4].flat = 0;
+  notes_buffer[4].octive = 4;
+  notes_buffer[4].length = .25;
+
+  
+notes_buffer[5].name = 'D';
+notes_buffer[5].flat = 0;
+  notes_buffer[5].octive = 3;
+  notes_buffer[5].length = .25;
+
+notes_buffer[6].name = 'E';
+notes_buffer[6].flat = 1;
+  notes_buffer[6].octive = 3;
+  notes_buffer[6].length = .25;
+
+notes_buffer[7].name = 'F';
+notes_buffer[7].flat = 0;
+  notes_buffer[7].octive = 3;
+  notes_buffer[7].length = 2;
+  playing = true;
 }
   
 void loop(){
@@ -73,13 +119,37 @@ void handle_timing(float timeToWait){
   while(currTime-prevTime<timeToWait){
   currTime=millis();
   handle_button();
-  handle_serial();
+  //handle_serial();
   handle_keypad();
-  
+  handle_playing();
   }
   
 }
-
+void handle_playing(){
+  if (playing){
+    
+    Note note = notes_buffer[current_note];
+    if ((note_start + length_to_mills(note.length)) < millis()){
+      if (current_note ==buffer_size){
+        current_note = 0;
+      }
+      else{
+        current_note = current_note + 1;
+      }
+      Serial.println("playing note");
+      Serial.println(current_note);
+      Serial.println("flat");
+      Serial.println(notes_buffer[current_note].flat);
+      Serial.println(notes_buffer[current_note].name);
+      note_start = millis();
+      if(notes_buffer[current_note].name == 'R'){
+        noTone(speaker);
+      }else{
+      note_start = millis();
+      tone(speaker,note_to_freq(String(notes_buffer[current_note].name), notes_buffer[current_note].octive,notes_buffer[current_note].flat));
+    }}
+  }
+}
 void handle_button(){
   
     //sample the state of the button - is it pressed or not?
@@ -106,14 +176,13 @@ void handle_serial(){
   if (Serial.available()){
     if (Serial.peek() != 'H'){
       Note note = notes_buffer[buffer_size];
-      note.name[0] = Serial.read();
+      note.name = Serial.read();
       if (Serial.peek() != ' '){
-        note.name[1] = Serial.read();
+        note.flat = true;
       }
       else{
-        note.name[1] = 0;
+         note.flat = false;
       }
-      note.name[2] = 0;
     
     }
     else{
@@ -144,9 +213,9 @@ void handle_keypad(){
                 if (kpd.key[i].kchar >= '1' && kpd.key[i].kchar <= '8'){ 
                 noteInt = kpd.key[i].kchar - '1';
                 if (noteInt == 7){
-                  pitch=note_to_freq(String("C"), 5);
+                  pitch=note_to_freq(String("C"), 5,false);
                 }else{
-                pitch=note_to_freq(String(notes[noteInt]), 4);
+                pitch=note_to_freq(String(notes[noteInt]), 4,false);
                 }
                 switch (kpd.key[i].kstate) {  // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
                     case PRESSED:
@@ -189,9 +258,10 @@ void handle_keypad(){
         }
         }
 }
-long note_to_freq(String noteIn, int octive) {
+long note_to_freq(String noteIn, int octive,bool flat) {
     double freq = 0;
     Serial.println(noteIn);
+    Serial.println(octive);
     const char* note;
     note=noteIn.c_str();
     if(octiveJmp)
@@ -200,25 +270,25 @@ long note_to_freq(String noteIn, int octive) {
     }
     if (strcmp(note, "C") == 0) {
         freq = 16.35;
-    } else if (strcmp(note, "Db") == 0) {
+    } else if ((strcmp(note, "D") == 0) && flat) {
         freq = 17.32;
     } else if (strcmp(note, "D") == 0) {
         freq = 18.35;
-    } else if (strcmp(note, "Eb") == 0) {
+    } else if ((strcmp(note, "E") == 0) && flat) {
         freq = 19.45;
     } else if (strcmp(note, "E") == 0) {
         freq = 20.60;
     } else if (strcmp(note, "F") == 0) {
         freq = 21.83;
-    } else if (strcmp(note, "Gb") == 0) {
+    } else if ((strcmp(note, "G") == 0) && flat) {
         freq = 23.12;
-    } else if (strcmp(note, "G") == 0) {
+    } else if ((strcmp(note, "G") == 0) && flat) {
         freq = 24.50;
-    } else if (strcmp(note, "Ab") == 0) {
+    } else if ((strcmp(note, "A") == 0) && flat) {
         freq = 25.96;
     } else if (strcmp(note, "A") == 0) {
         freq = 27.50;
-    } else if (strcmp(note, "Bb") == 0) {
+    } else if ((strcmp(note, "B") == 0) && flat) {
         freq = 29.14;
     } else if (strcmp(note, "B") == 0) {
         freq = 30.87;
