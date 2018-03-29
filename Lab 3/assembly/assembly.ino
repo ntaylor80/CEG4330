@@ -9,6 +9,7 @@
 */
 #include <Keypad.h>
 #include <string.h>
+#define MAX_BUFFER 256
 bool octiveJmp=0;
 const byte ROWS = 4; //four rows
 const byte COLS = 4; //four columns
@@ -30,11 +31,21 @@ int button_status = 1;
 byte rowPins[ROWS] = {9, 8, 7, 6}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {5, 4, 3, 2}; //connect to the column pinouts of the keypad
 byte speaker = 11;
-char music_note[3];
-int note_octive;
-float note_length;
+
+
+unsigned int notes_length;
 int bpm = 120;
 int bpm_mod = 1;
+
+typedef struct
+{
+  char name[3];
+  int octive;
+  float length;
+} Note;
+
+Note notes_buffer[MAX_BUFFER];
+unsigned int buffer_size = 0;
 
 Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 char notes[7]={'C','D','E','F','G','A','B'};
@@ -80,13 +91,23 @@ void handle_button(){
 
 void handle_serial(){
   if (Serial.available()){
-    if (Serial.peek() != 0x48){ //H character ends data
-    Serial.readBytesUntil("v",music_note,2);
-   Serial.print("music note");
-   Serial.println(music_note);
-   Serial.println(Serial.read());
+    if (Serial.peek() != 'H'){
+      Note note = notes_buffer[buffer_size];
+      note.name[0] = Serial.read();
+      if (Serial.peek() != ' '){
+        note.name[1] = Serial.read();
+      }
+      else{
+        note.name[1] = 0;
+      }
+      note.name[2] = 0;
+    
     }
-   }
+    else{
+      Serial.read();
+    }
+  }
+   
 /*
     note_octive = Serial.parseInt();
     note_length = Serial.parseFloat();
@@ -94,7 +115,7 @@ void handle_serial(){
     */
   }
 
-int length_to_mills(int length){
+int length_to_mills(float length){
   double mills_per_beat = (bpm / 60.0) * 1000;
   
   return mills_per_beat * length;
@@ -196,3 +217,4 @@ long note_to_freq(String noteIn, int octive) {
     }
     return freq;
 }
+
