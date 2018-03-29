@@ -9,7 +9,7 @@
 */
 #include <Keypad.h>
 #include <string.h>
-#define MAX_BUFFER 256
+#define MAX_BUFFER 150
 bool octiveJmp=0;
 const byte ROWS = 4; //four rows
 const byte COLS = 4; //four columns
@@ -43,16 +43,17 @@ typedef struct
   int octive;
   float length;
 } Note;
-
+bool playing = false;
+long playing_start = 0;
+Note current_note;
 Note notes_buffer[MAX_BUFFER];
-unsigned int buffer_size = 0;
+unsigned int buffer_size = -1;
 
 Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 char notes[7]={'C','D','E','F','G','A','B'};
 void setup(){
   Serial.begin(9600);
   pinMode(pushButton, INPUT_PULLUP);
-  
 }
   
 void loop(){
@@ -61,7 +62,7 @@ void loop(){
 handle_button();
 handle_serial();
 handle_keypad();  
-
+play_buffer();
   
   delay(100);
   
@@ -90,8 +91,8 @@ void handle_button(){
 }
 
 void handle_serial(){
-  if (Serial.available()){
-    if (Serial.peek() != 'H'){
+  if (Serial.available() && buffer_size < MAX_BUFFER -1){
+    if (Serial.peek() != 'H' && Serial.peek() != '\n'){
       Note note = notes_buffer[buffer_size];
       note.name[0] = Serial.read();
       if (Serial.peek() != ' '){
@@ -101,20 +102,32 @@ void handle_serial(){
         note.name[1] = 0;
       }
       note.name[2] = 0;
+
+    note.octive = Serial.parseInt();
+    note.length = Serial.parseFloat();
+    Serial.read(); //remove space
     
+   buffer_size = buffer_size + 1;
     }
     else{
       Serial.read();
     }
   }
-   
-/*
-    note_octive = Serial.parseInt();
-    note_length = Serial.parseFloat();
-    Serial.print(Serial.findUntil())
-    */
   }
 
+void play_buffer(){
+  Serial.println("play");
+  Serial.println(buffer_size + 1);
+  Serial.println(playing);
+  if(buffer_size + 1 && !playing){
+  Serial.println("new note");
+    current_note = notes_buffer[buffer_size];
+    playing_start = millis();
+    
+    tone(speaker, note_to_freq(String(current_note.name), current_note.octive));
+    
+  }
+}
 int length_to_mills(float length){
   double mills_per_beat = (bpm / 60.0) * 1000;
   
