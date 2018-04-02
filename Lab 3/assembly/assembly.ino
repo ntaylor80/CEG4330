@@ -9,6 +9,7 @@
 */
 #include <Keypad.h>
 #include <string.h>
+#include "LCD.h"
 #define MAX_BUFFER 150
 
 bool octiveJmp=0;
@@ -36,16 +37,23 @@ int button_status = 1;
 
 //pins
 
-int proximity_pin = A0;
+int proximity_pin = A3;
 byte rowPins[ROWS] = {9, 8, 7, 6}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {5, 4, 3, 2}; //connect to the column pinouts of the keypad
 byte pushButton=12;
 byte speaker = 11;
 byte led=10;
+bool led_state=0;
 byte freq_pin = 13;
+//
+//const int DATA_PIN = A1;
+//// clock pin
+//const int CLK_PIN = A2;
+//// slave select pin
+//const int SS_PIN = A0;
 
 unsigned int notes_length;
-int bpm = 120;
+int bpm = 140;
 int bpm_mod = 1;
 
 struct Note
@@ -58,12 +66,33 @@ struct Note
 bool playing = false;
 byte current_note = -1;
 long note_start = 0;
+long led_start = 0;
 Note notes_buffer[MAX_BUFFER];
 unsigned int buffer_size = 0;
 
+char songname[15] = "Zelda Theme";
+
 Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 char notes[7]={'C','D','E','F','G','A','B'};
+
+int print_delay=100;
+
+
+
+
 void setup(){
+//pwm setup 
+  pinMode(10, OUTPUT);
+
+  TCCR1A =  _BV(COM1B1) | _BV(WGM11) | _BV(WGM11);
+  TCCR1B = _BV(CS11) | _BV(WGM13) | _BV(WGM12);
+  ICR1 = 62499; //top
+  OCR1B = 30878; //duty
+  TCCR1B = TCCR1B & 0b11111000 | 0x07;
+
+
+/// here be all the zelda stuff
+  
   Serial.begin(9600);
   pinMode(pushButton, INPUT_PULLUP);
   
@@ -137,21 +166,117 @@ add_note('A',true,5,.666);
 add_note('G',true,5,.333);
 add_note('F',true,5,2);
 
-add_note('R',true,5,2);
+add_note('F', false, 5, 1);
 
-  playing = true;
+add_note('E', true, 5, .5);
+add_note('E', true, 5, .25);
+add_note('F', false, 5, .25);
+add_note('G', true, 5, 2);
+add_note('F', false, 5, .5);
+add_note('E', true, 5, .5);
+
+add_note('D', true, 5, .5);
+add_note('D', true, 5, .25);
+add_note('E', true, 5, .25);
+add_note('F', false, 5, 2);
+add_note('E', true, 5, .5);
+add_note('D', true, 5, .5);
+add_note('C', false, 5, .5);
+add_note('C', false, 5, .25);
+add_note('D', true, 5, .25);
+add_note('E', true, 5, 2);
+add_note('G', false, 5, 1);
+
+add_note('F', true, 4, .5);
+add_note('F', true, 4, .25);
+add_note('F', true, 4, .25);
+
+add_note('F', true, 4, .5);
+add_note('F', true, 4, .25);
+add_note('F', true, 4, .25);
+
+
+add_note('F', true, 4, .5);
+add_note('F', true, 4, .25);
+add_note('F', true, 4, .25);
+
+
+add_note('F', true, 4, .5);
+add_note('F', true, 4, .5);
+
+  //playing = true;
+lcdSPISetup();
+write_name(songname);
+
 }
   
 void loop(){
-
+  
   //char key = keypad.getKey();
 
+  handle_button();
+  handle_serial();
+  handle_keypad();
+  handle_playing();
+  handle_led();
+ if (print_delay + length_to_mills(1) < millis()){
+// Serial.print(getSignal());
+ }
+    
+}
+float getSignal(){
+  long pwm_high=pulseIn(freq_pin,HIGH,1000);
+  long pwm_low=pulseIn(freq_pin, LOW,1000);
+  float period=pwm_high+pwm_low;
+  //Period in microseconds
+  period=period/1000000;
+  //period in secondds
+  float frequency=1/period;
+  return frequency;
+}
+void write_name(const char *str){
+  char2LCD(0xFE);
+  char2LCD(0x51);
+  delayMicroseconds(1500);
+  str2LCD(str);
+  setCursorPos(0x40);
+  str2LCD("Note:");
+}
+void write_note(char note,bool flat){
 
+  Serial.println(note);
+  setCursorPos(0x45);
+  delayMicroseconds(150);
+  char2LCD(note);
+  if (flat){
+    char2LCD('b');
+  }else{
+    char2LCD(' ');
+  }
+}
+int get_proximity(){
   
-  handle_timing(length_to_mills(1));
-  
+  return map(analogRead(proximity_pin),0,700,0,100);
+}
+void handle_led(){
+  if (led_start + length_to_mills(1) < millis()){
+    led_start=millis();
+    led_state=!led_state;
+    
+     int freqIn=getSignal();
+     if(freqIn>100000){
+      freqIn=2000;
+     }
+     
+     
+    led_start+=freqIn;
+     set_pin_10_pwm(freqIn,led_state*get_proximity());
+  }
 }
 
+void clear_notes(){
+  buffer_size = 0;
+}
 void add_note(char name, bool flat, int octive, float length){
   notes_buffer[buffer_size].name = name;
   notes_buffer[buffer_size].flat = flat;
@@ -159,17 +284,7 @@ void add_note(char name, bool flat, int octive, float length){
   notes_buffer[buffer_size].length = length;
   buffer_size++;
 }
-void handle_timing(float timeToWait){
-  prevTime=currTime;
-  while(currTime-prevTime<timeToWait){
-  currTime=millis();
-  handle_button();
-  //handle_serial();
-  handle_keypad();
-  handle_playing();
-  }
-  
-}
+
 void next_note(){
   if (current_note == buffer_size - 1){
         current_note = 0;
@@ -177,6 +292,7 @@ void next_note(){
       else{
         current_note = current_note + 1;
       }
+      write_note(notes_buffer[current_note].name,notes_buffer[current_note].flat);
 }
 void playNote(){
   note_start = millis();
@@ -245,21 +361,34 @@ void handle_button(){
 }
 
 void handle_serial(){
+
+
+  
   if (Serial.available()){
-    if (Serial.peek() != 'H'){
-      Note note = notes_buffer[buffer_size];
-      note.name = Serial.read();
-      if (Serial.peek() != ' '){
-        note.flat = true;
-      }
-      else{
-         note.flat = false;
-      }
-    
-    }
-    else{
+    if (Serial.peek() == '$'){
       Serial.read();
+      while(true){
+        if (!Serial.available()){
+          break;
+          playing = true;
+        }
+        if (Serial.peek() == '$'){
+          playing = true;
+          break;
+        }else{
+           add_note(Serial.read(),Serial.parseInt(),Serial.parseInt(),Serial.parseFloat());
+        if(Serial.peek() == ':'){
+            Serial.read();
     }
+        }
+      }
+
+
+  }
+  
+else{
+    Serial.read();
+  }
   }
    
 /*
@@ -287,13 +416,16 @@ void handle_keypad(){
                 if (noteInt == 7){
                   
                   pitch=note_to_freq('C', 5,false);
+                  write_note('C',false);
                 }else{
                 pitch=note_to_freq(notes[noteInt], 4,false);
+                write_note(notes[noteInt],false);
                 }
                 switch (kpd.key[i].kstate) {  // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
                     case PRESSED:
                      playing=false;
                      tone(speaker, pitch);
+                     
                      Serial.println(kpd.key[i].kchar);
                     msg = " PRESSED.";
                 break;
@@ -303,6 +435,7 @@ void handle_keypad(){
                 break;
                     case RELEASED:
                     noTone(speaker);
+                    write_note(' ',false);
                     msg = " RELEASED.";
                 break;
                     case IDLE:
@@ -318,8 +451,9 @@ void handle_keypad(){
                     msg = " HOLD.";
                 break;
                     case RELEASED:
-                    Serial.println("pause zelsa");//octive change");
+                    Serial.println("pause zelda");//octive change");
                     playing=!playing;
+                    noTone(speaker);
                     //octive = (octive == 1) ? 2 : 1;
                     msg = " RELEASED.";
                 break;
@@ -374,4 +508,117 @@ long note_to_freq(char note, int octive,bool flat) {
     }
     return freq;
 }
+void set_pin_10_pwm(float freq,int duty){
+  unsigned long max_top = 65536;
+  unsigned long N_TOP = 16000000.0/ freq;
+  unsigned int prescaler;
+  unsigned int top;
+  unsigned int duty_cycle;
+  unsigned char mode;
+  Serial.println("pin 10");
+
+  Serial.println(N_TOP);
+  if(N_TOP <= 1 * max_top){
+    prescaler = 1;
+  }
+  else if (N_TOP <= 8 * max_top){
+      prescaler = 8;
+  }
+ 
+  else if (N_TOP <= 64 * max_top){
+      prescaler = 64;
+  }
+  else if (N_TOP <= 256 * max_top){
+      prescaler = 256;
+  }
+  else {
+      prescaler = 1024;
+  }
+
+  switch(prescaler) {
+      case 1: mode = 0x01; break;
+      case 8: mode = 0x02; break;
+      case 64: mode = 0x04; break;
+      case 256: mode = 0x06; break;
+      case 1024: mode = 0x07; break;
+      default: return;
+    }
+  TCCR1B = TCCR1B & 0b11111000 | mode;
+  
+  top = (N_TOP / prescaler) - 1;
+  duty_cycle = (duty / 100.0) * top;
+
+  
+  ICR1 = top;
+  OCR1B = duty_cycle;
+  
+ 
+ 
+  Serial.print("top: ");
+  Serial.println(top);
+    Serial.print("duty: ");
+  Serial.println(duty_cycle);
+}
+
+//
+//void char2LCD(const int dataPin, const int clockPin, 
+//              const int ssPin, const byte ch, 
+//              const int byteOrder = MSBFIRST)
+//{
+//  byte compareValue = 0x80;
+//  // initialize compareValue
+//  if(byteOrder == MSBFIRST)
+//  {
+//    compareValue = 0x80;
+//  } else 
+//  {
+//    compareValue = 0x01;
+//  }
+//  
+//  // enable slave select
+//  digitalWrite(ssPin, LOW);
+//  
+//  // shift out data
+//  for (int i = 0; i < 8; i++)
+//  {
+//    // send bit to data pin
+//    digitalWrite(dataPin, (ch&compareValue)?HIGH:LOW);
+//    
+//    // shift compare value
+//    if(byteOrder == MSBFIRST)
+//    {
+//        compareValue = compareValue >> 1;
+//    } else 
+//    {
+//        compareValue = compareValue << 1;
+//    }
+//    
+//    // trigger clk rising edge(toggle low then high)
+//    digitalWrite(clockPin, LOW);
+//    // wait before trigger
+//    delayMicroseconds(4);
+//    digitalWrite(clockPin, HIGH);
+//    // wait, LCD can only handle up to 100KHz
+//    delayMicroseconds(14);
+//    
+//  }
+//  // disable slave select
+//  digitalWrite(ssPin, HIGH);
+//}
+//
+//// convenience function for char2LCD using global pin variables
+//void char2LCD(const byte ch)
+//{
+//  char2LCD(DATA_PIN, CLK_PIN, SS_PIN, ch);
+//}
+//
+//// Output string to LCD
+//void str2LCD(const char *str) 
+//{
+//    int i = 0;
+//    while(str[i]) {
+//        char2LCD(str[i]);
+//        i++;
+//    }  
+//}
 

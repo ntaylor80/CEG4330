@@ -11,18 +11,15 @@
  * So the below software implementation is provided to allow for a slower SCLK.
  */
  
-// #include <SoftwareSerial.h>  
+ 
 //////// GLOBALS ////////
 
 // data out pin
-const int DATA_PIN = A3;
+const int DATA_PIN = A1;
 // clock pin
 const int CLK_PIN = A2;
 // slave select pin
-const int SS_PIN = A1;
-
-
-/// make bluetooth object////
+const int SS_PIN = A0;
 
 //////// Function prototypes ////////
 
@@ -44,10 +41,6 @@ void lcdSPISetup();
                 
 
 //////// CODE ////////
-
-//bluetooth setup code
-
-
 
 // Send character to LCD over SPI. Software implementation for slower SCLK
 void char2LCD(const int dataPin, const int clockPin, 
@@ -162,49 +155,7 @@ void lcdSPISetup()
 
 
 // Arduino setup()
-void setup(){
-  lcdSPISetup();
-  
-}
 
 
 // Arduino loop()
-void loop(){
 
-  
-  // Clear screen
-  clearScreen();
-  
-  
-  // print a 'c' to the LCD
-  char2LCD('c');
-  
-  // Wait 1 second
-  delay(1000);
-  
-  // Go to second line
-  setCursorPos(0x40);
-    // print a 'b' to the LCD
-  char2LCD(DATA_PIN, CLK_PIN, SS_PIN, 'b');
-
-  // Print a string to the LCD
-  str2LCD("Hello World");
-  
-  // wait 1.5 second
-  delay(1500);
-
-//  while(true){
-//  if(bluetooth.available())  // If the bluetooth sent any characters
-//  {
-//    // Send any characters the bluetooth prints to the serial monitor
-//    Serial.print((char)bluetooth.read());  
-//  }
-//  if(Serial.available())  // If stuff was typed in the serial monitor
-//  {
-//    // Send any characters the Serial monitor prints to the bluetooth
-//    bluetooth.print((char)Serial.read());
-//  }
-//  }
-  
-
-}
