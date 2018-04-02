@@ -285,12 +285,14 @@ void handle_keypad(){
                 if (kpd.key[i].kchar >= '1' && kpd.key[i].kchar <= '8'){ 
                 noteInt = kpd.key[i].kchar - '1';
                 if (noteInt == 7){
+                  
                   pitch=note_to_freq('C', 5,false);
                 }else{
                 pitch=note_to_freq(notes[noteInt], 4,false);
                 }
                 switch (kpd.key[i].kstate) {  // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
                     case PRESSED:
+                     playing=false;
                      tone(speaker, pitch);
                      Serial.println(kpd.key[i].kchar);
                     msg = " PRESSED.";
@@ -316,7 +318,8 @@ void handle_keypad(){
                     msg = " HOLD.";
                 break;
                     case RELEASED:
-                    Serial.println("octive change");
+                    Serial.println("pause zelsa");//octive change");
+                    playing=!playing;
                     //octive = (octive == 1) ? 2 : 1;
                     msg = " RELEASED.";
                 break;
