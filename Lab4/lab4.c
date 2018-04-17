@@ -56,13 +56,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-int main(void){
 
 int c_size = 3;
 int r_size = 4;
-
+unsigned int timer_count = 0;
+int blink = 0;
 uint_fast16_t c[]={GPIO_PIN5,GPIO_PIN6,GPIO_PIN7};//all on port 1
 uint_fast16_t r[]={GPIO_PIN4,GPIO_PIN5,GPIO_PIN6,GPIO_PIN7};//all on port 2
+
+
+int main(void){
 
     volatile uint32_t ii;
 
@@ -71,7 +74,7 @@ uint_fast16_t r[]={GPIO_PIN4,GPIO_PIN5,GPIO_PIN6,GPIO_PIN7};//all on port 2
 
     /* Configuring P1.0 as output and P1.1 (switch) as input */
     MAP_GPIO_setAsOutputPin(GPIO_PORT_P1, GPIO_PIN0);
-
+    MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1,GPIO_PIN0);
 
 
     /* Configuring P1.1 as an input and enabling interrupts */
@@ -96,9 +99,9 @@ uint_fast16_t r[]={GPIO_PIN4,GPIO_PIN5,GPIO_PIN6,GPIO_PIN7};//all on port 2
 
     /* Enabling SRAM Bank Retention */
     MAP_SysCtl_enableSRAMBankRetention(SYSCTL_SRAM_BANK1);
-    
+
     /* Enabling MASTER interrupts */
-    MAP_Interrupt_enableMaster();   
+    MAP_Interrupt_enableMaster();
 
     /* Going to LPM3 */
     while (1)
@@ -107,6 +110,40 @@ uint_fast16_t r[]={GPIO_PIN4,GPIO_PIN5,GPIO_PIN6,GPIO_PIN7};//all on port 2
     }
 }
 
+
+
+void start_timer(unsigned int time){
+    timer_count = time * 2;
+    uint_fast16_t TIMER_PERIOD = 46875;
+    const Timer_A_UpModeConfig upConfig =
+       {
+       TIMER_A_CLOCKSOURCE_SMCLK, // SMCLK Clock Source
+       TIMER_A_CLOCKSOURCE_DIVIDER_64, // SMCLK/1 = 3MHz
+       TIMER_PERIOD, // 11,718 tick period
+       TIMER_A_TAIE_INTERRUPT_DISABLE, // Disable Timer interrupt
+       TIMER_A_CCIE_CCR0_INTERRUPT_ENABLE , // Enable CCR0 interrupt
+       TIMER_A_DO_CLEAR // Clear value
+      };
+
+    MAP_Timer_A_configureUpMode(TIMER_A1_BASE, &upConfig);
+    MAP_Interrupt_enableInterrupt(INT_TA1_0);
+    MAP_Timer_A_startCounter(TIMER_A1_BASE, TIMER_A_UP_MODE);
+}
+
+void TA1_0_IRQHandler(void)
+ {
+    timer_count--;
+    MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);
+    MAP_Timer_A_clearCaptureCompareInterrupt(TIMER_A1_BASE,
+    TIMER_A_CAPTURECOMPARE_REGISTER_0);
+
+    if (timer_count <= 0){
+        MAP_Timer_A_stopTimer(TIMER_A0_BASE);
+        MAP_Interrupt_disableInterrupt(INT_TA1_0);
+        blink = 0;
+    }
+ }
+
 /* GPIO ISR */
 void PORT1_IRQHandler(void)
 {
@@ -114,13 +151,16 @@ void PORT1_IRQHandler(void)
 
     status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P1);
     MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, status);
-    
+
     if(status & c[0]){
-        
-    }
+        if(~blink){
+        start_timer(3);
+        blink = 1;
+        }
+        }
     /* Toggling the output on the LED */
 
-        MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);
+        //MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);
 
 
 }
