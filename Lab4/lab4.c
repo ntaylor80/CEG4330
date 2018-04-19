@@ -56,6 +56,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+int actual_number=0;
 
 int c_size = 3;
 int r_size = 4;
@@ -111,8 +112,10 @@ int main(void){
 
 
 void start_timer(unsigned int time){
+
+    //64M/64/46875/2 = 0.5Hz
     timer_count = time * 2;
-    uint_fast16_t TIMER_PERIOD = 46875;
+    uint_fast16_t TIMER_PERIOD = 23875;
     const Timer_A_UpModeConfig upConfig =
        {
        TIMER_A_CLOCKSOURCE_SMCLK, // SMCLK Clock Source
@@ -149,27 +152,29 @@ void PORT1_IRQHandler(void)
 
     status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P1);//tells us the row triggered
     //now get the column
-    int multiplyer=status;
-    int base=1;
+    int row=0;
+    int col=1;
     int i=0;
-    for(i=0;i<r_size;i++){
-        MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P2,r[i]);
-        if(!(MAP_GPIO_getInputPinValue(GPIO_PORT_P1,status))){
-            base=i;
-            i=r_size;//might be safer than break, idk
-        }
-    }
-    //gert column
+    //get column
     for(i=0;i<c_size;i++){
         if(c[i]==status){
-         base = i;
-         i=c_size;
+            col=i+1;
+            break;
         }
+    }
+    for(i=0;i<r_size;i++){
+        MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P2,r[i]);
+        if(MAP_GPIO_getInputPinValue(GPIO_PORT_P1,status)==GPIO_INPUT_PIN_HIGH){
+            row=i+1;
+            MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P2,r[i]);
+            break;
+        }
+        MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P2,r[i]);
     }
 
     //multiplyer is the row, base is the column, rXc or {1,2,3,4} x {1,2,3} = {1,2,3}{4,5,6}{7,8,9} to find the key pressed
     //this makes the order of the pins in r[] and c[] determine which keys work
-    int actual_number=multiplyer*base;
+    actual_number=row*col;
 
 
 
