@@ -63,8 +63,6 @@ unsigned int timer_count = 0;
 int blink = 0;
 uint_fast16_t c[]={GPIO_PIN5,GPIO_PIN6,GPIO_PIN7};//all on port 1
 uint_fast16_t r[]={GPIO_PIN4,GPIO_PIN5,GPIO_PIN6,GPIO_PIN7};//all on port 2
-
-
 int main(void){
 
     volatile uint32_t ii;
@@ -149,18 +147,51 @@ void PORT1_IRQHandler(void)
 {
     uint32_t status;
 
-    status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P1);
+    status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P1);//tells us the row triggered
+    //now get the column
+    int multiplyer=status;
+    int base=1;
+    int i=0;
+    for(i=0;i<r_size;i++){
+        MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P2,r[i]);
+        if(!(MAP_GPIO_getInputPinValue(GPIO_PORT_P1,status))){
+            base=i;
+            i=r_size;//might be safer than break, idk
+        }
+    }
+    //gert column
+    for(i=0;i<c_size;i++){
+        if(c[i]==status){
+         base = i;
+         i=c_size;
+        }
+    }
+
+    //multiplyer is the row, base is the column, rXc or {1,2,3,4} x {1,2,3} = {1,2,3}{4,5,6}{7,8,9} to find the key pressed
+    //this makes the order of the pins in r[] and c[] determine which keys work
+    int actual_number=multiplyer*base;
+
+
+
+    start_timer(actual_number);//assuming timer waits 1/2 hz
+
+
+
+
+
     MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, status);
 
-    if(status & c[0]){
-        if(~blink){
-        start_timer(3);
-        blink = 1;
-        }
-        }
-    /* Toggling the output on the LED */
-
-        //MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);
-
+//
+//    //not sure what this does
+//    if(status & c[0]){
+//        if(~blink){
+//        start_timer(3);
+//        blink = 1;
+//        }
+//        }
+//    /* Toggling the output on the LED */
+//
+//     MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);
+//
 
 }
